@@ -11,12 +11,13 @@ end
 
 function icϕ_exactdiag(ϕlist::Array{T,1}, p; kw...) where {T}
     θlist = -0.5:0.25:π+0.5
+    ph = snshamiltonian(p)
     I = zeros(Float64, length(θlist), length(ϕlist))  
     for i in 1:length(ϕlist) 
         if i % 3 == 0
             println(i/length(ϕlist))
         else nothing end
-        I[:, i] = supercurrent_exactdiag(collect(θlist), p, ϕlist[i]; kw...)  
+        I[:, i] = supercurrent_exactdiag(collect(θlist), ph, ϕlist[i]; kw...)  
     end
     return I 
 end
@@ -31,8 +32,7 @@ continuum states, because the parent gap will be larger that the induced
 gap. However, once the subspace is specified, we can always substract
 this contribution for the full KPM contribution. 
     Two different methods implemented method = :free_energy """
-function supercurrent_exactdiag(θlist, p, ϕ; nev = 10, kw...)
-    ph = snshamiltonian(p)
+function supercurrent_exactdiag(θlist, ph, ϕ; nev = 10, kw...)
     f = SharedArray(zeros(Float64, length(θlist)))
     @sync @distributed for i in 1:length(θlist)
         f[i] = -sum(negative_eigen(ph, θlist[i], ϕ, nev; kw...)) 
