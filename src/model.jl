@@ -86,7 +86,7 @@ function modelsc(p = Params())
 end
 
 function modelvacuum(p = Params()) 
-    (; a0, μn) = p
+    (; a0, μn, Ln) = p
     t = hoppingconstant(a0)
     return onsite((2t-μn) * σ0τz) + hopping((r, dr) -> -t * ifelse(Ln+a0 >r[1]> a0 && dr[1] == 0, 0, 1) * σ0τz, range = a0)
 end
