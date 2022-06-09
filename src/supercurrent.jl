@@ -10,7 +10,7 @@ function fraunhofer_abs_exact(ϕlist::Array{T,1}, p; kw...) where {T}
 end
 
 function icϕ_exactdiag(ϕlist::Array{T,1}, p; kw...) where {T}
-    θlist = -0.5:0.25:π+0.5
+    θlist =0:0.3:2π+0.1
     ph = snshamiltonian(p)
     I = zeros(Float64, length(θlist), length(ϕlist))  
     for i in 1:length(ϕlist) 
