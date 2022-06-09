@@ -60,7 +60,7 @@ function lattices(p = Params())
     return lat_hel, Quantica.combine(lat_vactop, lat_vacbot), 
         Quantica.combine(lat_sctopl, lat_scbotl,lat_sctopr, lat_scbotr)
 end
-
+ 
 function modelhelical(p = Params())
     (; a0, Ln, Lny, Ls, nvacbands, μn) = p
     t = hoppingconstant(a0)
