@@ -80,7 +80,7 @@ function modelsc(p = Params())
         ifelse(r[1]>Ls+Ln/2, θ, 0)
     # magnetic and sc phase differences
     sc_on! = @onsite!((o, r; θ, ϕ) -> o .* 
-        @SMatrix[1 0 0 cis(scphase(r, θ, ϕ)); 0 1 -cis(scphase(r, θ, ϕ)) 0; 0 -cis(-scphase(r, θ, ϕ)) 1 0; cis(-scphase(r, θ, ϕ)) 0 0 1])
+        @SMatrix[1 0 0 cis(scphase(r, θ, ϕ)); 0 1 cis(scphase(r, θ, ϕ)) 0; 0 cis(-scphase(r, θ, ϕ)) 1 0; cis(-scphase(r, θ, ϕ)) 0 0 1])
     sc_hop = hopping(-t * σ0τz, range = a0)
     return  sc_on + sc_hop, sc_on!
 end
