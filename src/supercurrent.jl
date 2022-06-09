@@ -10,9 +10,10 @@ function fraunhofer_abs_exact(ϕlist::Array{T,1}, p; kw...) where {T}
 end
 
 function icϕ_exactdiag(ϕlist::Array{T,1}, p; kw...) where {T}
-    θlist =0:0.3:2π+0.1
+    
+    θlist =-3π/20:2π/20:2π
     ph = snshamiltonian(p)
-    I = zeros(Float64, length(θlist), length(ϕlist))  
+    I = zeros(Float64, length(θlist)-1, length(ϕlist))  
     for i in 1:length(ϕlist) 
         if i % 3 == 0
             println(i/length(ϕlist))
@@ -39,7 +40,7 @@ function supercurrent_exactdiag(θlist, ph, ϕ; nev = 10, kw...)
     end
     ip = interpolate((θlist,), f, Gridded(Linear()));
     deriv =[Interpolations.gradient(ip, i)[1] for i in θlist]
-    return deriv # @. 2/ħoe .* 
+    return deriv[2:end] # @. 2/ħoe .* 
 end
 
 
