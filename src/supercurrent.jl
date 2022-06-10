@@ -58,9 +58,9 @@ function which_hamiltonian(method, p)
         elseif method == :denseedgevac
             densesnshamiltonian(p)
         elseif method == :helical
-            helicalsnshamiltonian(p)
+            snshelicalhamiltonian(p)
         elseif method == :densehelical
-            densehelicalsnshamiltonian(p)
+            densesnshelicalhamiltonian(p)
         else
             @warn "unsupported method, default method = :edgevac was assumed"
             snshamiltonian(p)
