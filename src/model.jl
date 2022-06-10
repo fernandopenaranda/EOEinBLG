@@ -40,7 +40,7 @@ function lattices(p = Params())
 
     check_lattice(a0, Ln, Lny, Ls)
     vac_width = (nvacbands)*a0
-
+    
     hel_reg(r) = (a0 <= r[1] <= Ln + a0 && 0 <= r[2] <= Lny)*!(2a0 <= r[1] <= Ln  && 0 < r[2] < Lny)
     vactop_reg(r) = a0 <= r[1] <= Ln + a0 && Lny+vac_width + a0/2 > r[2] > Lny 
     vacbot_reg(r) = a0 <= r[1] <= Ln + a0 && 0 > r[2] >= -vac_width -a0/2
@@ -48,6 +48,8 @@ function lattices(p = Params())
     scbot_regleft(r) = (-Ls + a0 <= r[1] < a0 || Ln + a0 + Ls >= r[1] > Ln + a0) &&  Lny <= r[2] < Lny + vac_width + a0/2
     sctop_regright(r) = Ln + a0 + Ls >= r[1] > Ln + a0 && -vac_width -a0/2 < r[2] <= 0 
     scbot_regright(r) = Ln + a0 + Ls >= r[1] > Ln + a0 &&  Lny <= r[2] < Lny + vac_width + a0/2
+    scdense_left(r) = -Ls + a0 <= r[1] < a0  && -vac_width -a0/2 < r[2] < Lny + vac_width + a0/2
+    scdense_right(r) = Ln + a0 + Ls >= r[1] > Ln + a0 && -vac_width -a0/2 < r[2] < Lny + vac_width + a0/2
 
     lat_hel = LP.square(; a0 = a0, dim = 2) |> unitcell(region = hel_reg)
     lat_vactop = LP.square(; a0 = a0, dim = 2) |> unitcell(region = vactop_reg)
@@ -56,9 +58,12 @@ function lattices(p = Params())
     lat_scbotl = LP.square(; a0 = a0, dim = 2) |> unitcell(region = scbot_regleft)
     lat_sctopr = LP.square(; a0 = a0, dim = 2) |> unitcell(region = sctop_regright)
     lat_scbotr = LP.square(; a0 = a0, dim = 2) |> unitcell(region = scbot_regright)
+    lat_scdenseleft = LP.square(; a0 = a0, dim = 2) |> unitcell(region = scdense_left)
+    lat_scdenseright = LP.square(; a0 = a0, dim = 2) |> unitcell(region = scdense_right)
 
     return lat_hel, Quantica.combine(lat_vactop, lat_vacbot), 
-        Quantica.combine(lat_sctopl, lat_scbotl,lat_sctopr, lat_scbotr)
+        Quantica.combine(lat_sctopl, lat_scbotl,lat_sctopr, lat_scbotr), 
+        Quantica.combine(lat_scdenseleft, lat_scdenseright)
 end
  
 function modelhelical(p = Params())
@@ -90,15 +95,26 @@ function modelvacuum(p = Params())
     t = hoppingconstant(a0)
     return onsite((2t-μn) * σ0τz) + hopping((r, dr) -> -t * ifelse(Ln+a0 >r[1]> a0 && dr[1] == 0, 0, 1) * σ0τz, range = a0)
 end
-
+                
+function modeldensevacuum(p = Params())
+    (; a0, μn, Ln) = p
+    t = hoppingconstant(a0)
+return onsite((2t-μn) * σ0τz) + hopping((r, dr) -> -t * σ0τz, range = a0)
+                                       
 function modelregcoupling(p = Params())
     (; a0, τns, τnlink, Ln) = p
     t = hoppingconstant(a0)
     return hopping( (r, dr) -> -t*τnlink * ifelse(Ln+a0 >r[1]> a0,0,1) * σ0τz, range = a0),  hopping(-t*τns * σ0τz, range = a0)
 end
 
+function modelcouplingdense(p = Params())
+    (; a0, τns, τnlink, Ln) = p
+    t = hoppingconstant(a0)
+    return hopping( (r, dr) -> -t*τnlink * σ0τz, range = a0),  hopping(-t*τns * σ0τz, range = a0)                        
+end
+                        
 function snshamiltonian(p = Params())
-    lat_hel, lat_vac, lat_sc = lattices(p)
+    lat_hel, lat_vac, lat_sc, _ = lattices(p)
     hel_model, hel_modifier! = modelhelical(p)
     sc_model, sc_modifier! = modelsc(p)
     helvac_model, normalsc_model = modelregcoupling(p)
@@ -112,12 +128,40 @@ function snshamiltonian(p = Params())
     return ph
 end
 
-                        
-function snshelicalhamiltonian(p = Params())
-    lat_hel, lat_vac, lat_sc = lattices(p)
+                                
+function densesnshamiltonian(p = Params())
+    lat_hel, lat_vac, _ , lat_sc  = lattices(p)
     hel_model, hel_modifier! = modelhelical(p)
     sc_model, sc_modifier! = modelsc(p)
-    helvac_model, normalsc_model = modelregcoupling(p)
+    helvac_model, normalsc_model = modelregcouplingdense(p)
+    
+    h_hel = lat_hel |> hamiltonian(hel_model; orbitals = Val(4))
+    h_vac = lat_vac |> hamiltonian(modeldensevacuum(p); orbitals = Val(4))
+    h_sc = lat_sc |> hamiltonian(sc_model; orbitals = Val(4))
+
+    ph = Quantica.combine(Quantica.combine(h_hel, h_vac; coupling = helvac_model),
+        h_sc; coupling = normalsc_model) |> parametric(hel_modifier!, sc_modifier!)
+    return ph
+end
+                        
+function snshelicalhamiltonian(p = Params())
+    lat_hel, lat_vac, lat_sc, _ = lattices(p)
+    hel_model, hel_modifier! = modelhelical(p)
+    sc_model, sc_modifier! = modelsc(p)
+    _, normalsc_model = modelregcoupling(p)
+    
+    h_hel = lat_hel |> hamiltonian(hel_model; orbitals = Val(4))
+    h_sc = lat_sc |> hamiltonian(sc_model; orbitals = Val(4))
+
+    ph = Quantica.combine(h_hel, h_sc; coupling = normalsc_model) |> parametric(hel_modifier!, sc_modifier!)
+    return ph
+end
+                                                                             
+function densesnshelicalhamiltonian(p = Params())
+    lat_hel, lat_vac, _, lat_sc = lattices(p)
+    hel_model, hel_modifier! = modelhelical(p)
+    sc_model, sc_modifier! = modelsc(p)
+    _, normalsc_model = modelregcoupling(p)
     
     h_hel = lat_hel |> hamiltonian(hel_model; orbitals = Val(4))
     h_sc = lat_sc |> hamiltonian(sc_model; orbitals = Val(4))
