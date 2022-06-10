@@ -13,6 +13,6 @@ module EOEinBLG
     include("model.jl")
     include("supercurrent.jl")
 
-    export Params, snshamiltonian, fraunhofer_abs_exact, icϕ_exactdiag, 
+    export Params, snshamiltonian, snshelicalhamiltonian, fraunhofer_abs_exact, icϕ_exactdiag, 
         supercurrent_exactdiag, negative_eigen
 end
