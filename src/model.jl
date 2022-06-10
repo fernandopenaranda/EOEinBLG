@@ -100,6 +100,7 @@ function modeldensevacuum(p = Params())
     (; a0, μn, Ln) = p
     t = hoppingconstant(a0)
 return onsite((2t-μn) * σ0τz) + hopping((r, dr) -> -t * σ0τz, range = a0)
+end
                                        
 function modelregcoupling(p = Params())
     (; a0, τns, τnlink, Ln) = p
