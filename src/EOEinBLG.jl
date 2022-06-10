@@ -14,5 +14,5 @@ module EOEinBLG
     include("supercurrent.jl")
 
     export Params, snshamiltonian, snshelicalhamiltonian, fraunhofer_abs_exact, icϕ_exactdiag, 
-        supercurrent_exactdiag, negative_eigen
+        supercurrent_exactdiag, negative_eigen, Jcsweep, spectrumvsmun, which_hamiltonian
 end
