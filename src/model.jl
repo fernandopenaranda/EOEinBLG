@@ -112,6 +112,19 @@ function snshamiltonian(p = Params())
     return ph
 end
 
+                        
+function snshelicalhamiltonian(p = Params())
+    lat_hel, lat_vac, lat_sc = lattices(p)
+    hel_model, hel_modifier! = modelhelical(p)
+    sc_model, sc_modifier! = modelsc(p)
+    helvac_model, normalsc_model = modelregcoupling(p)
+    
+    h_hel = lat_hel |> hamiltonian(hel_model; orbitals = Val(4))
+    h_sc = lat_sc |> hamiltonian(sc_model; orbitals = Val(4))
+
+    ph = Quantica.combine(h_hel, h_sc; coupling = normalsc_model) |> parametric(hel_modifier!, sc_modifier!)
+    return ph
+end
 
 
 ########
