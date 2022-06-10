@@ -71,18 +71,24 @@ function modelhelical(p = Params())
     t = hoppingconstant(a0)
     hel_ons = onsite((2t-μn) * σ0τz)
     hel_hop = hopping(-t * σ0τz, range = a0)
+    return hel_ons+hel_hop
+end
+
+function peierlshop!(p = Params())
+    (; a0, Ln, Lny, Ls, nvacbands, μn) = p
     peierls(r, dr,  ϕ) = ifelse(r[2]>Lny || r[2]<0, 1, cispi(-ϕ*(r[1]*dr[2]/(Ln*Lny))))
-    hel_hop! = @hopping!((t, r, dr; θ, ϕ) ->  t .*
+    return @hopping!((t, r, dr;  ϕ) ->  t .*
         @SVector[peierls(r, dr, ϕ), peierls(r, dr, ϕ), conj(peierls(r, dr,ϕ)), conj(peierls(r, dr, ϕ))]; range = a0)
-    return hel_ons+hel_hop, hel_hop!
 end
 
 function modelsc(p = Params()) 
     (; a0, Ln, Lny, Ls, μs, Δ) = p
     t = hoppingconstant(a0)
     sc_on = onsite((2t-μs) * σ0τz - Δ * σyτy)
-    scphase(r, θ, ϕ) = 2π*ϕ * (ifelse(r[2]>Lny/2, 1,0) * ifelse(r[1]>Ls+Ln/2, 1,0)) +
+    scphase(r, θ, ϕ) = 2π*ϕ * (ifelse(r[2]>0, ifelse(r[2] > Lny, 1, r[2]/Lny),0) * ifelse(r[1]>Ls+Ln/2, 1,0)) +
         ifelse(r[1]>Ls+Ln/2, θ, 0)
+    # scphase(r, θ, ϕ) = 2π*ϕ * (ifelse(r[2]>Lny/2, 1,0) * ifelse(r[1]>Ls+Ln/2, 1,0)) +
+    #     ifelse(r[1]>Ls+Ln/2, θ, 0) (not general for the dense sc models)
     # magnetic and sc phase differences
     sc_on! = @onsite!((o, r; θ, ϕ) -> o .* 
         @SMatrix[1 0 0 cis(scphase(r, θ, ϕ)); 0 1 cis(scphase(r, θ, ϕ)) 0; 0 cis(-scphase(r, θ, ϕ)) 1 0; cis(-scphase(r, θ, ϕ)) 0 0 1])
@@ -108,7 +114,7 @@ function modelregcoupling(p = Params())
     return hopping( (r, dr) -> -t*τnlink * ifelse(Ln+a0 >r[1]> a0,0,1) * σ0τz, range = a0),  hopping(-t*τns * σ0τz, range = a0)
 end
 
-function modelcouplingdense(p = Params())
+function modelregcouplingdense(p = Params())
     (; a0, τns, τnlink, Ln) = p
     t = hoppingconstant(a0)
     return hopping( (r, dr) -> -t*τnlink * σ0τz, range = a0),  hopping(-t*τns * σ0τz, range = a0)                        
@@ -116,7 +122,7 @@ end
                         
 function snshamiltonian(p = Params())
     lat_hel, lat_vac, lat_sc, _ = lattices(p)
-    hel_model, hel_modifier! = modelhelical(p)
+    hel_model = modelhelical(p)
     sc_model, sc_modifier! = modelsc(p)
     helvac_model, normalsc_model = modelregcoupling(p)
     
@@ -125,14 +131,14 @@ function snshamiltonian(p = Params())
     h_sc = lat_sc |> hamiltonian(sc_model; orbitals = Val(4))
 
     ph = Quantica.combine(Quantica.combine(h_hel, h_vac; coupling = helvac_model),
-        h_sc; coupling = normalsc_model) |> parametric(hel_modifier!, sc_modifier!)
+        h_sc; coupling = normalsc_model) |> parametric(peierlshop!(p), sc_modifier!)
     return ph
 end
 
                                 
 function densesnshamiltonian(p = Params())
     lat_hel, lat_vac, _ , lat_sc  = lattices(p)
-    hel_model, hel_modifier! = modelhelical(p)
+    hel_model = modelhelical(p)
     sc_model, sc_modifier! = modelsc(p)
     helvac_model, normalsc_model = modelregcouplingdense(p)
     
@@ -141,33 +147,33 @@ function densesnshamiltonian(p = Params())
     h_sc = lat_sc |> hamiltonian(sc_model; orbitals = Val(4))
 
     ph = Quantica.combine(Quantica.combine(h_hel, h_vac; coupling = helvac_model),
-        h_sc; coupling = normalsc_model) |> parametric(hel_modifier!, sc_modifier!)
+        h_sc; coupling = normalsc_model) |> parametric(peierlshop!(p), sc_modifier!)
     return ph
 end
                         
 function snshelicalhamiltonian(p = Params())
     lat_hel, lat_vac, lat_sc, _ = lattices(p)
-    hel_model, hel_modifier! = modelhelical(p)
+    hel_model = modelhelical(p)
     sc_model, sc_modifier! = modelsc(p)
     _, normalsc_model = modelregcoupling(p)
     
     h_hel = lat_hel |> hamiltonian(hel_model; orbitals = Val(4))
     h_sc = lat_sc |> hamiltonian(sc_model; orbitals = Val(4))
 
-    ph = Quantica.combine(h_hel, h_sc; coupling = normalsc_model) |> parametric(hel_modifier!, sc_modifier!)
+    ph = Quantica.combine(h_hel, h_sc; coupling = normalsc_model) |> parametric(hel_peierlshop!(p), sc_modifier!)
     return ph
 end
                                                                              
 function densesnshelicalhamiltonian(p = Params())
     lat_hel, lat_vac, _, lat_sc = lattices(p)
-    hel_model, hel_modifier! = modelhelical(p)
+    hel_model = modelhelical(p)
     sc_model, sc_modifier! = modelsc(p)
     _, normalsc_model = modelregcoupling(p)
     
     h_hel = lat_hel |> hamiltonian(hel_model; orbitals = Val(4))
     h_sc = lat_sc |> hamiltonian(sc_model; orbitals = Val(4))
 
-    ph = Quantica.combine(h_hel, h_sc; coupling = normalsc_model) |> parametric(hel_modifier!, sc_modifier!)
+    ph = Quantica.combine(h_hel, h_sc; coupling = normalsc_model) |> parametric(peierlshop!(p), sc_modifier!)
     return ph
 end
 
