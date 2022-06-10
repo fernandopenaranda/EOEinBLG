@@ -1,4 +1,3 @@
-#high level functions:
 """
     Jcsweep(p, list, method)
 computes Jc(\phi) for different values of μn for an available method 
