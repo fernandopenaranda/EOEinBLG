@@ -1,8 +1,8 @@
-"""
-    Jcsweep(p, list, method)
-computes Jc(\phi) for different values of μn for an available method 
-see: fraunhofer_abs_exact()
-"""
+# """
+#     Jcsweep(p, list, method)
+# computes Jc(\phi) for different values of μn for an available method 
+# see: fraunhofer_abs_exact()
+# """
 function Jcsweep(p, list, method = :edgevac)
     fluxlist = collect(0:0.1:2)
     Ivsmu = zeros(Float64, length(list), length(fluxlist))  
