@@ -4,14 +4,92 @@
 # see: fraunhofer_abs_exact()
 # """
 function Jcsweep(p, list, method = :edgevac)
-    fluxlist = collect(0:0.1:2)
+    fluxlist = collect(0:0.1:4)
     Ivsmu = zeros(Float64, length(list), length(fluxlist))  
     for i in 1:length(list)
         println(i/length(list))
-        Ivsmu[i,:] = fraunhofer_abs_exact(fluxlist, reconstruct(p, μn = list[i]), method = method)[2]
+        Ivsmu[i,:] = fraunhofer_abs_exact(fluxlist, reconstruct(p, μn = list[i]), ethod = method)[2]
     end
-    return Ivsmu
+    return Ivsmu                
 end
+
+"""
+    Jcsweepvsnbads(p, list, fluxlist, method = :edgevac)
+Jc sweeps vs nbands for one of the available method list 
+see: fraunhofer_abs_exact()
+"""
+Jcsweepvsnbads(p, n::Integer, fluxlist, method = :edgevac) = Jcsweepvsnbads(p, collect(1:n), fluxlist, method)
+
+function Jcsweepvsnbads(p, list, fluxlist, method)
+    Ivsmu = zeros(Float64, length(list), length(fluxlist))  
+    for i in 1:length(list)
+        println(i/length(list))
+        Ivsmu[i,:] = fraunhofer_abs_exact(fluxlist, reconstruct(p, nvacbands = list[i]), method)[2]
+    end
+    return Ivsmu                
+end
+"""
+    Jcsweepvsnbadsresonance(p, list, fluxlist, method = :edgevac)
+Jc sweeps vs nbands for one of the available method list 
+computed at the chemical potential at resonance with a helical channel
+Warning select properly the window for mun calculation
+see: fraunhofer_abs_exact()
+"""
+Jcsweepvsnbadsresonance(p, n::Integer, fluxlist, munlist, excited_energy, method = :edgevac) = 
+    Jcsweepvsnbadsresonance(p, collect(1:n), fluxlist, munlist, excited_energy, method)
+
+function Jcsweepvsnbadsresonance(p, list, fluxlist, munlist, excited_energy, method)
+    threshold = 1e-5
+    println("method: ", method)
+    Ivsmu = zeros(Float64, length(list), length(fluxlist))  
+    ϵlist = zeros(Float64, length(list))
+    μnlist = zeros(Float64, length(list))
+    for i in 1:length(list)
+        ϵlist[i], μnlist[i] = spectrumvsmuncondition_finder(
+                reconstruct(p, nvacbands = list[i]), munlist, 0, 0, excited_energy, method)
+        # chemical potential where the resonance is found at zero field
+        # valid under the assumption that the spectrum is weakly affected by the phase difference
+    end
+    new_e = findmax(ϵlist)[1] + excited_energy
+    println("μnlist: ", μnlist)
+    println("ϵlist: ", ϵlist .+ excited_energy)
+    for i in 1:length(list) #this second pass guarantees that the standard dev is minimum
+        ϵlist[i], μnlist[i] = spectrumvsmuncondition_finder(
+                reconstruct(p, nvacbands = list[i]), munlist, 0, 0, new_e, method)
+    end
+
+    println("μnlist: ", μnlist)
+    println("ϵlist: ", ϵlist .+ new_e)
+    stdev = std(ϵlist) # ideally 0
+    if stdev >  threshold 
+        @warn "pay attention to munlist. Resonant condition not reached"
+    else println("resonant condition met for all bands. Std: ", stdev) end
+    println("computing supercurrent...")
+    for i in 1:length(list)
+        println(i/length(list))
+        Ivsmu[i,:] = fraunhofer_abs_exact(fluxlist, reconstruct(p, μn = μnlist[i], nvacbands = list[i]), method)[2]
+    end
+    return Ivsmu                 
+end
+
+"""
+    spectrumvstheta(p, list, ϕ, method)
+computes the spectrum vs sc phase difference for an available method 
+see: fraunhofer_abs_exact()
+"""
+function spectrumvstheta(p, list, ϕ, method)
+    numeigs = 64
+    siz = size(which_hamiltonian(method, p).h, 1)
+    splist = SharedArray(zeros(Float64, length(list), 4*siz)) 
+    @sync @distributed for i in 1:length(list)
+        println(i/length(list))
+        ph  = which_hamiltonian(method, p)
+        # splist[i, :] = spectrum(ph(θ = list[i], ϕ = ϕ), method = ArpackPackage(nev=numeigs,  sigma=1e-6im)).energies
+        splist[i, :] = spectrum(ph(θ = list[i], ϕ = ϕ)).energies
+    end
+    return splist, list
+end
+
 
 
 """
@@ -24,12 +102,63 @@ function spectrumvsmun(p, list,θ, ϕ, method)
     siz = size(which_hamiltonian(method, p).h, 1)
     splist = SharedArray(zeros(Float64, length(list), numeigs)) 
     @sync @distributed for i in 1:length(list)
-        println(i/length(list))
+        #println(i/length(list))
         ph = which_hamiltonian(method, reconstruct(p, μn = list[i]))
         splist[i, :] = spectrum(ph(θ = θ, ϕ = ϕ), method = ArpackPackage(nev=numeigs,  sigma=1e-6im)).energies
     end
     return splist, list
 end
+
+
+
+function spectrumvsmunnbands(p, list,θ, ϕ, method, nbands)
+    numeigs = 4
+    siz = size(which_hamiltonian(method, p).h, 1)
+    splist = SharedArray(zeros(Float64, length(list), nbands)) 
+    for j in 1:nbands
+        @sync @distributed for i in 1:length(list)
+            #println(i/length(list))
+            ph = which_hamiltonian(method, reconstruct(p, μn = list[i], nvacbands = j))
+            splist[i, j] = spectrum(ph(θ = θ, ϕ = ϕ), method = ArpackPackage(nev=numeigs,  sigma=1e-6im)).energies[2]
+        end
+    end
+    return splist, list
+end
+
+"""
+    spectrumvsmun(p, list,θ, ϕ, method)
+computes the spectrumvsmun for an available method 
+see: fraunhofer_abs_exact()
+"""
+function spectrumvsmunmin_finder(p, list,θ, ϕ, method)
+    numeigs = 2
+    siz = size(which_hamiltonian(method, p).h, 1)
+    splist = SharedArray(zeros(Float64, length(list), 1)) 
+    @sync @distributed for i in 1:length(list)
+        #println(i/length(list))
+        ph = which_hamiltonian(method, reconstruct(p, μn = list[i]))
+        splist[i, 1] = abs(spectrum(ph(θ = θ, ϕ = ϕ), method = ArpackPackage(nev=numeigs,  sigma=1e-6im)).energies[2])
+    end
+    ϵ, min_location = findmin(splist)
+    return ϵ, list[min_location]
+    
+end
+# it finds the mun that minimises abs(e_firsexcitedstate - spectrum), in other words 
+# it allows to compare different calculations for different bands 
+function spectrumvsmuncondition_finder(p, list,θ, ϕ, energy_excited,  method)
+    numeigs = 4
+    siz = size(which_hamiltonian(method, p).h, 1)
+    splist = SharedArray(zeros(Float64, length(list), 1)) 
+    @sync @distributed for i in 1:length(list)
+        #println(i/length(list))
+        ph = which_hamiltonian(method, reconstruct(p, μn = list[i]))
+        splist[i, 1] = abs(spectrum(ph(θ = θ, ϕ = ϕ), method = ArpackPackage(nev=numeigs,  sigma=1e-6im)).energies[2])
+    end
+    ϵ, min_location = findmin(abs.(splist .- energy_excited) )
+    return ϵ, list[min_location]
+    
+end
+
 
 """
     fraunhofer_abs_exact(ϕlist::Array{T,1}, p, method = :edgevac; kw...)
