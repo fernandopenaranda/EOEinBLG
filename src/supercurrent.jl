@@ -39,38 +39,55 @@ Jcsweepvsnbadsresonance(p, n::Integer, fluxlist, munlist, excited_energy, method
     Jcsweepvsnbadsresonance(p, collect(1:n), fluxlist, munlist, excited_energy, method)
 
 function Jcsweepvsnbadsresonance(p, list, fluxlist, munlist, excited_energy, method)
+    println("method: ", method)
+    methodhel = ifelse(method == :edgevac, :helical, :densehelical)
+    Ivsmu = zeros(Float64, length(list)+1, length(fluxlist))  
+    println("computing supercurrent...")
+    μnlist =  munfromresonance(p, list, fluxlist, munlist, excited_energy, method, methodhel)
+    println(1/(length(list)+1))
+    Ivsmu[1,:] = fraunhofer_abs_exact(fluxlist, reconstruct(p, μn = μnlist[1], nvacbands = list[1]), methodhel)[2]
+    for i in 2:length(list)+1
+        println(i/(length(list)+1))
+        Ivsmu[i,:] = fraunhofer_abs_exact(fluxlist, reconstruct(p, μn = μnlist[i], nvacbands = list[i-1]), method)[2]
+    end
+    return Ivsmu                 
+end
+"""
+    munfromresonance(p, list, fluxlist, munlist, excited_energy, method, methodhel)
+computes the mun positions so the energy of the first excited state is constant as we increase the number of bands
+"""
+function munfromresonance(p, list, fluxlist, munlist, excited_energy, method, methodhel)
     threshold = 1e-5
     println("method: ", method)
-    Ivsmu = zeros(Float64, length(list), length(fluxlist))  
-    ϵlist = zeros(Float64, length(list))
-    μnlist = zeros(Float64, length(list))
-    for i in 1:length(list)
+    ϵlist = zeros(Float64, length(list)+1)
+    μnlist = zeros(Float64, length(list)+1)
+    
+    ϵlist[1], μnlist[1] = spectrumvsmuncondition_finder(
+                reconstruct(p, nvacbands = 1), munlist, 0, 0, excited_energy, methodhel) # 0 bands just the helical edge
+                
+    for i in 2:length(list)+1
         ϵlist[i], μnlist[i] = spectrumvsmuncondition_finder(
-                reconstruct(p, nvacbands = list[i]), munlist, 0, 0, excited_energy, method)
+                reconstruct(p, nvacbands = list[i-1]), munlist, 0, 0, excited_energy, method)
         # chemical potential where the resonance is found at zero field
         # valid under the assumption that the spectrum is weakly affected by the phase difference
     end
     new_e = findmax(ϵlist)[1] + excited_energy
-    println("μnlist: ", μnlist)
-    println("ϵlist: ", ϵlist .+ excited_energy)
-    for i in 1:length(list) #this second pass guarantees that the standard dev is minimum
+    # println("μnlist: ", μnlist); println("ϵlist: ", ϵlist .+ excited_energy)
+    #this second pass guarantees that the standard dev is minimum
+    ϵlist[1], μnlist[1] = spectrumvsmuncondition_finder(
+        reconstruct(p, nvacbands = 1), munlist, 0, 0, new_e, :helical) # 0 bands just the helical edge
+    for i in 2:length(list)+1 
         ϵlist[i], μnlist[i] = spectrumvsmuncondition_finder(
-                reconstruct(p, nvacbands = list[i]), munlist, 0, 0, new_e, method)
+                reconstruct(p, nvacbands = list[i-1]), munlist, 0, 0, new_e, method)
     end
-
-    println("μnlist: ", μnlist)
-    println("ϵlist: ", ϵlist .+ new_e)
+    println("μnlist: ", μnlist)# println("ϵlist: ", ϵlist .+ new_e)
     stdev = std(ϵlist) # ideally 0
     if stdev >  threshold 
         @warn "pay attention to munlist. Resonant condition not reached"
     else println("resonant condition met for all bands. Std: ", stdev) end
-    println("computing supercurrent...")
-    for i in 1:length(list)
-        println(i/length(list))
-        Ivsmu[i,:] = fraunhofer_abs_exact(fluxlist, reconstruct(p, μn = μnlist[i], nvacbands = list[i]), method)[2]
-    end
-    return Ivsmu                 
+    return μnlist
 end
+
 
 """
     spectrumvstheta(p, list, ϕ, method)

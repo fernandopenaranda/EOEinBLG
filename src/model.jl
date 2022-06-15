@@ -76,9 +76,11 @@ end
 
 function peierlshop!(p = Params())
     (; a0, Ln, Lny, Ls, nvacbands, μn) = p
+
+    
     peierls(r, dr,  ϕ) =  ifelse(r[2]>Lny || r[2]<0, 1, ifelse(r[1]< a0 ,cispi(-ϕ*((-a0)*dr[2]/((Ln)*Lny))),
         ifelse(r[1]<= Ln + a0, cispi(-ϕ*((r[1]-a0)*dr[2]/((Ln)*Lny))), cispi(-ϕ*((Ln+a0)*dr[2]/(Ln*Lny))) )))
-    #ifelse(r[2]>Lny || r[2]<0, 1, cispi(-ϕ*((r[1]-a0)*dr[2]/(Ln*Lny))))
+    
     return @hopping!((t, r, dr;  ϕ) ->  t .*
         @SVector[peierls(r, dr, ϕ), peierls(r, dr, ϕ), conj(peierls(r, dr,ϕ)), conj(peierls(r, dr, ϕ))]; range = a0)
 end
@@ -87,10 +89,10 @@ function modelsc(p = Params())
     (; a0, Ln, Lny, Ls, μs, Δ) = p
     t = hoppingconstant(a0)
     sc_on = onsite((2t-μs) * σ0τz - Δ * σyτy)
+ 
     scphase(r, θ, ϕ) = 2π*ϕ * (ifelse(r[2]>0, ifelse(r[2] >= Lny, 1, r[2]/Lny),0) * ifelse(r[1]>Ls+Ln/2, 1,0)) +
         ifelse(r[1]>Ln/2+a0/2, θ, 0)
-    # scphase(r, θ, ϕ) = 2π*ϕ * (ifelse(r[2]>Lny/2, 1,0) * ifelse(r[1]>Ls+Ln/2, 1,0)) +
-    #     ifelse(r[1]>Ls+Ln/2, θ, 0) #(not general for the dense sc models)
+  
     # magnetic and sc phase differences
     sc_on! = @onsite!((o, r; θ, ϕ) -> o .* 
         @SMatrix[1 0 0 cis(scphase(r, θ, ϕ)); 0 1 cis(scphase(r, θ, ϕ)) 0; 0 cis(-scphase(r, θ, ϕ)) 1 0; cis(-scphase(r, θ, ϕ)) 0 0 1])
