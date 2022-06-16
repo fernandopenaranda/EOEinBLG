@@ -96,7 +96,7 @@ function modelsc(p = Params())
     # magnetic and sc phase differences
     sc_on! = @onsite!((o, r; θ, ϕ) -> o .* 
         @SMatrix[1 0 0 cis(scphase(r, θ, ϕ)); 0 1 cis(scphase(r, θ, ϕ)) 0; 0 cis(-scphase(r, θ, ϕ)) 1 0; cis(-scphase(r, θ, ϕ)) 0 0 1])
-    sc_hop = hopping((r,dr) -> -t * σ0τz, range = a0)#ifelse(dr[1] == 0, 0, 1)*
+    sc_hop = hopping((r,dr) ->ifelse(dr[1] == 0, 0, 1)* -t * σ0τz, range = a0)#ifelse(dr[1] == 0, 0, 1)*
     return  sc_on + sc_hop, sc_on!
 end
 

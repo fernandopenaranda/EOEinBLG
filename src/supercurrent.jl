@@ -43,8 +43,11 @@ function Jcsweepvsnbadsresonance(p, list, fluxlist, munlist, excited_energy, met
     methodhel = ifelse(method == :edgevac, :helical, :densehelical)
     Ivsmu = zeros(Float64, length(list)+1, length(fluxlist))  
     println("computing supercurrent...")
-    μnlist =  munfromresonance(p, list, fluxlist, munlist, excited_energy, method, methodhel)
+    μnlist = munfromresonance(p, list, fluxlist, munlist, excited_energy, method, methodhel) 
+    #spectrumvsmuncondition_finder(reconstruct(p, nvacbands = 1), munlist, 0, 0, excited_energy, methodhel)[2] .* ones(length(list)+1) 
+        
     println(1/(length(list)+1))
+    println(μnlist)
     Ivsmu[1,:] = fraunhofer_abs_exact(fluxlist, reconstruct(p, μn = μnlist[1], nvacbands = list[1]), methodhel)[2]
     for i in 2:length(list)+1
         println(i/(length(list)+1))
@@ -80,7 +83,8 @@ function munfromresonance(p, list, fluxlist, munlist, excited_energy, method, me
         ϵlist[i], μnlist[i] = spectrumvsmuncondition_finder(
                 reconstruct(p, nvacbands = list[i-1]), munlist, 0, 0, new_e, method)
     end
-    println("μnlist: ", μnlist)# println("ϵlist: ", ϵlist .+ new_e)
+    println("μnlist: ", μnlist)
+    println("ϵlist: ", ϵlist .+ new_e)
     stdev = std(ϵlist) # ideally 0
     if stdev >  threshold 
         @warn "pay attention to munlist. Resonant condition not reached"
