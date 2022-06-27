@@ -103,8 +103,7 @@ end
 function modelvacuum(p = Params()) 
     (; a0, μn, Ln) = p
     t = hoppingconstant(a0)
-    return onsite((2t-μn) * σ0τz) + hopping((r,dr) -> -t * ifelse(dr[2]==0, 1, 0) * σ0τz , range = a0) 
-    #hopping((r, dr) -> -t * ifelse(Ln+a0 >r[1]> a0 && dr[1] == 0, 0, 1)* ifelse(dr[1] == 0, 0.3, 1) * σ0τz, range = a0)
+    return onsite((2t-μn) * σ0τz) + hopping((r, dr) -> -t * ifelse(Ln+a0 >r[1]> a0 && dr[1] == 0, 0, 1)* ifelse(dr[1] == 0, 0, 1) * σ0τz, range = a0)
 end
                 
 function modeldensevacuum(p = Params())
@@ -114,9 +113,9 @@ return onsite((2t-μn) * σ0τz) + hopping((r, dr) ->  ifelse(Ln+a0 >r[1]> a0 &&
 end
                                        
 function modelregcoupling(p = Params())
-    (; a0, τns, τnlink, Ln, nvacbands) = p
+    (; a0, τns, τnlink, Ln, nvacbands,Lny) = p
     t = hoppingconstant(a0)
-    return hopping( (r, dr) -> -t*τnlink * ifelse(Ln+a0 >r[1]> a0,0,1) * σ0τz, range = nvacbands*a0),  hopping(-t*τns * σ0τz, range = a0)
+return hopping((r, dr) -> -t* τnlink/2 * (1+ rand()) * ifelse(0<(dr[2]/2+r[2])<Lny,0,1) * ifelse(0<(-dr[2]/2+r[2])<Lny,0,1) * ifelse(Ln+a0 >r[1]> a0,0,1) * σ0τz, range = (nvacbands)*a0),  hopping(-t*τns * σ0τz, range = a0) 
 end
 
 function modelregcouplingdense(p = Params())
