@@ -16,7 +16,6 @@ Default presets
     Lny = 400
     Ls = 20
     nvacbands = 1
-    μnvabands = 1e-4
     τnlink = 0
     τns = .1
     μn = 1e-4
@@ -45,10 +44,10 @@ function lattices(p = Params())
     hel_reg(r) = (a0 <= r[1] <= Ln + a0 && 0 <= r[2] <= Lny)*!(2a0 <= r[1] <= Ln  && 0 < r[2] < Lny)
     vactop_reg(r) = a0 <= r[1] <= Ln + a0 && Lny+vac_width + a0/2 > r[2] > Lny 
     vacbot_reg(r) = a0 <= r[1] <= Ln + a0 && 0 > r[2] >= -vac_width -a0/2
-    sctop_regleft(r) = (-Ls + a0 <= r[1] < a0 || Ln + a0 + Ls >= r[1] > Ln + a0) && -vac_width -a0/2 < r[2] < 0 
-    scbot_regleft(r) = (-Ls + a0 <= r[1] < a0 || Ln + a0 + Ls >= r[1] > Ln + a0) &&  Lny < r[2] < Lny + vac_width + a0/2
-    sctop_regright(r) = Ln + a0 + Ls >= r[1] > Ln + a0 && -vac_width -a0/2 < r[2] < 0 
-    scbot_regright(r) = Ln + a0 + Ls >= r[1] > Ln + a0 &&  Lny < r[2] < Lny + vac_width + a0/2
+    sctop_regleft(r) = (-Ls + a0 <= r[1] < a0 || Ln + a0 + Ls >= r[1] > Ln + a0) && -vac_width -a0/2 < r[2] <= 0 
+    scbot_regleft(r) = (-Ls + a0 <= r[1] < a0 || Ln + a0 + Ls >= r[1] > Ln + a0) &&  Lny <= r[2] < Lny + vac_width + a0/2
+    sctop_regright(r) = Ln + a0 + Ls >= r[1] > Ln + a0 && -vac_width -a0/2 < r[2] <= 0 
+    scbot_regright(r) = Ln + a0 + Ls >= r[1] > Ln + a0 &&  Lny <= r[2] < Lny + vac_width + a0/2
     scdense_left(r) = -Ls + a0 <= r[1] < a0  && -vac_width -a0/2 < r[2] < Lny + vac_width + a0/2
     scdense_right(r) = Ln + a0 + Ls >= r[1] > Ln + a0 && -vac_width -a0/2 < r[2] < Lny + vac_width + a0/2
 
@@ -101,11 +100,9 @@ function modelsc(p = Params())
 end
 
 function modelvacuum(p = Params()) 
-    (; a0, μn,μnvabands, Ln) = p
+    (; a0, μn, Ln) = p
     t = hoppingconstant(a0)
-    return onsite((2t-μnvabands) * σ0τz) + hopping((r, dr) -> -t * ifelse(Ln+a0 >r[1]> a0 && dr[1] == 0, 0, 1)* ifelse(dr[1] == 0, 0, 1) * ifelse(a0<=r[1]<= 2a0, 1, 1) * ifelse(Ln<r[1]<= Ln +a0/2, 1, 1) * σ0τz,  range = a0)
-    #return onsite((2t-μn) * σ0τz) + hopping((r, dr) -> -t * ifelse(Ln+a0 >r[1]> a0 && dr[1] == 0, 0, 1)* ifelse(dr[1] == 0, 0, 1) * ifelse(0<r[1]<= Ln +a0/2, 0, 1) * σ0τz, range = a0)
-    #return onsite((2t-μnvabands) * σ0τz) + hopping((r, dr) -> -t * ifelse(Ln+a0 >r[1]> a0 && dr[1] == 0, 0, 1)* ifelse(dr[1] == 0, 0, 1) * σ0τz, range = a0)
+    return onsite((2t-μn) * σ0τz) + hopping((r, dr) -> -t * ifelse(Ln+a0 >r[1]> a0 && dr[1] == 0, 0, 1)* ifelse(dr[1] == 0, 0, 1) * σ0τz, range = a0)
 end
                 
 function modeldensevacuum(p = Params())
@@ -117,8 +114,7 @@ end
 function modelregcoupling(p = Params())
     (; a0, τns, τnlink, Ln, nvacbands,Lny) = p
     t = hoppingconstant(a0)
-    #return hopping((r, dr) -> -t* τnlink * ifelse(0<(dr[2]/2+r[2])<Lny,0,1) * ifelse(0<(-dr[2]/2+r[2])<Lny,0,1) * ifelse(Ln+a0 >r[1]> a0, 1,1) * ifelse(dr[1] == 0, 1, 0) * σ0τz, range = (nvacbands)*a0),  hopping(-t*τns * σ0τz, range = a0) 
-    return hopping((r, dr) -> -t* τnlink * ifelse(0<(dr[2]/2+r[2])<Lny,0,1) * ifelse(0<(-dr[2]/2+r[2])<Lny,0,1) * ifelse(Ln+a0 >r[1]> a0,0,1) * σ0τz, range = (nvacbands)*a0),  hopping(-t*τns * σ0τz, range = a0) 
+return hopping((r, dr) -> -t* τnlink/2 * (1+ rand()) * ifelse(0<(dr[2]/2+r[2])<Lny,0,1) * ifelse(0<(-dr[2]/2+r[2])<Lny,0,1) * ifelse(Ln+a0 >r[1]> a0,0,1) * σ0τz, range = (nvacbands)*a0),  hopping(-t*τns * σ0τz, range = a0) 
 end
 
 function modelregcouplingdense(p = Params())
@@ -163,6 +159,7 @@ function snshelicalhamiltonian(p = Params())
     hel_model = modelhelical(p)
     sc_model, sc_modifier! = modelsc(p)
     _, normalsc_model = modelregcoupling(p)
+    
     h_hel = lat_hel |> hamiltonian(hel_model; orbitals = Val(4))
     h_sc = lat_sc |> hamiltonian(sc_model; orbitals = Val(4))
 
@@ -183,20 +180,6 @@ function densesnshelicalhamiltonian(p = Params())
     return ph
 end
 
-function edgehamiltonian(p = Params())
-    lat_hel, lat_vac, lat_sc, _ = lattices(p)
-    hel_model = modelhelical(p)
-    sc_model, sc_modifier! = modelsc(p)
-    helvac_model, normalsc_model = modelregcoupling(p)
-    
-    h_hel = lat_hel |> hamiltonian(hel_model; orbitals = Val(4))
-    h_vac = lat_vac |> hamiltonian(modelvacuum(p); orbitals = Val(4))
-    h_sc = lat_sc |> hamiltonian(sc_model; orbitals = Val(4))
-
-    ph = Quantica.combine( h_vac,h_sc; coupling = normalsc_model) |> parametric(
-            peierlshop!(p), sc_modifier!)
-    return ph
-end
 
 ########
 

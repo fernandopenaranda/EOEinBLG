@@ -13,6 +13,31 @@ function Jcsweep(p, list, method = :edgevac)
     return Ivsmu                
 end
 
+function Jcsweepvstaunlink(p, taulist, fluxlist, method = :edgevac)
+    Ivsmu = zeros(Float64, length(taulist), length(fluxlist))  
+    for i in 1:length(taulist)
+        Ivsmu[i,:] = fraunhofer_abs_exact(fluxlist, reconstruct(p_use, τnlink = taulist[i]), :edgevac)[2]
+    end
+    return Ivsmu
+end
+
+function Jcsweepvsmu(p, mulist, fluxlist, method = :edgevac)
+    Ivsmu = zeros(Float64, length(mulist), length(fluxlist))  
+    for i in 1:length(mulist)
+        Ivsmu[i,:] = fraunhofer_abs_exact(fluxlist, reconstruct(p, μn = mulist[i]), :edgevac)[2]
+    end
+    return Ivsmu
+end
+
+
+function Jcsweepvsmuvacbands(p, mulist, fluxlist, method = :edgevac)
+    Ivsmu = zeros(Float64, length(mulist), length(fluxlist))  
+    for i in 1:length(mulist)
+        Ivsmu[i,:] = fraunhofer_abs_exact(fluxlist, reconstruct(p, μnvabands = mulist[i]), :edgevac)[2]
+    end
+    return Ivsmu
+end
+
 """
     Jcsweepvsnbads(p, list, fluxlist, method = :edgevac)
 Jc sweeps vs nbands for one of the available method list 
@@ -98,20 +123,19 @@ end
 computes the spectrum vs sc phase difference for an available method 
 see: fraunhofer_abs_exact()
 """
+
+
 function spectrumvstheta(p, list, ϕ, method)
     numeigs = 64
     siz = size(which_hamiltonian(method, p).h, 1)
-    splist = SharedArray(zeros(Float64, length(list), 4*siz)) 
+    splist = SharedArray(zeros(Float64, length(list), numeigs)) 
     @sync @distributed for i in 1:length(list)
-        println(i/length(list))
-        ph  = which_hamiltonian(method, p)
-        # splist[i, :] = spectrum(ph(θ = list[i], ϕ = ϕ), method = ArpackPackage(nev=numeigs,  sigma=1e-6im)).energies
-        splist[i, :] = spectrum(ph(θ = list[i], ϕ = ϕ)).energies
+        #println(i/length(list))
+        ph = which_hamiltonian(method, p)
+        splist[i, :] = spectrum(ph(θ = list[i[]], ϕ = ϕ), method = ArpackPackage(nev=numeigs,  sigma=1e-6im)).energies
     end
     return splist, list
 end
-
-
 
 """
     spectrumvsmun(p, list,θ, ϕ, method)
@@ -130,6 +154,47 @@ function spectrumvsmun(p, list,θ, ϕ, method)
     return splist, list
 end
 
+function spectrumvsτnlink(p, list,θ, ϕ, method)
+    numeigs = 64
+    siz = size(which_hamiltonian(method, p).h, 1)
+    splist = SharedArray(zeros(Float64, length(list), numeigs)) 
+    @sync @distributed for i in 1:length(list)
+        #println(i/length(list))
+        ph = which_hamiltonian(method, reconstruct(p, τnlink = list[i]))
+        splist[i, :] = spectrum(ph(θ = θ, ϕ = ϕ), method = ArpackPackage(nev=numeigs,  sigma=1e-6im)).energies
+    end
+    return splist, list
+end
+
+
+
+function spectrumvsflux(p, list,θ, method)
+    numeigs = 64
+    siz = size(which_hamiltonian(method, p).h, 1)
+    splist = SharedArray(zeros(Float64, length(list), numeigs)) 
+    @sync @distributed for i in 1:length(list)
+        #println(i/length(list))
+        ph = which_hamiltonian(method, p)
+        splist[i, :] = spectrum(ph(θ = θ, ϕ = list[i]), method = ArpackPackage(nev=numeigs,  sigma=1e-6im)).energies
+    end
+    return splist, list
+end
+
+
+
+function spectrumvsmu(p, list, θ, ϕ, method)
+    numeigs = 32
+    siz = size(which_hamiltonian(method, p).h, 1)
+    splist = SharedArray(zeros(Float64, length(list), numeigs)) 
+    @sync @distributed for i in 1:length(list)
+        #println(i/length(list))
+        ph = which_hamiltonian(method, reconstruct(p, μn = list[i]))
+        splist[i, :] = spectrum(ph(θ = θ, ϕ = ϕ), method = ArpackPackage(nev=numeigs,  sigma=1e-6im)).energies
+    end
+    return splist, list
+end
+
+
 
 
 function spectrumvsmunnbands(p, list,θ, ϕ, method, nbands)
@@ -140,7 +205,7 @@ function spectrumvsmunnbands(p, list,θ, ϕ, method, nbands)
         @sync @distributed for i in 1:length(list)
             #println(i/length(list))
             ph = which_hamiltonian(method, reconstruct(p, μn = list[i], nvacbands = j))
-            splist[i, j] = spectrum(ph(θ = θ, ϕ = ϕ), method = ArpackPackage(nev=numeigs,  sigma=1e-6im)).energies[2]
+            splist[i, j] = spectrum(ph(θ = θ, ϕ = ϕ), method = ArpackPackage(nev=numeigs,  sigma=1e-6im)).energies
         end
     end
     return splist, list
@@ -205,6 +270,8 @@ end
 function which_hamiltonian(method, p)
         if method == :edgevac
             snshamiltonian(p)
+        elseif method == :edges
+            edgehamiltonian(p)
         elseif method == :denseedgevac
             densesnshamiltonian(p)
         elseif method == :helical
@@ -218,7 +285,7 @@ function which_hamiltonian(method, p)
 end
 
 function icϕ_exactdiag(ϕlist::Array{T,1}, p, method; kw...) where {T}
-    θlist =-3π/20:2π/20:2π
+    θlist =-3π/20:2π/80:2π
     ph = which_hamiltonian(method, p)
     I = zeros(Float64, length(θlist)-1, length(ϕlist))  
     for i in 1:length(ϕlist) 
