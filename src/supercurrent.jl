@@ -15,6 +15,7 @@ end
 
 function Jcsweepvstaunlink(p, taulist, fluxlist, method = :edgevac)
     Ivsmu = zeros(Float64, length(taulist), length(fluxlist))  
+    println(p)
     for i in 1:length(taulist)
         Ivsmu[i,:] = fraunhofer_abs_exact(fluxlist, reconstruct(p, τnlink = taulist[i]), :edgevac)[2]
     end
@@ -194,6 +195,18 @@ function spectrumvsmu(p, list, θ, ϕ, method)
     return splist, list
 end
 
+function spectrumvsmuvac(p, list, θ, ϕ, method)
+    numeigs = 32
+    siz = size(which_hamiltonian(method, p).h, 1)
+    splist = SharedArray(zeros(Float64, length(list), numeigs)) 
+    @sync @distributed for i in 1:length(list)
+        #println(i/length(list))
+        ph = which_hamiltonian(method, reconstruct(p, μnvabands = list[i]))
+        splist[i, :] = spectrum(ph(θ = θ, ϕ = ϕ), method = ArpackPackage(nev=numeigs,  sigma=1e-6im)).energies
+    end
+    return splist, list
+end
+
 
 
 
@@ -285,7 +298,7 @@ function which_hamiltonian(method, p)
 end
 
 function icϕ_exactdiag(ϕlist::Array{T,1}, p, method; kw...) where {T}
-    θlist =-3π/20:2π/80:2π
+    θlist =-3π/20:2π/20:2π #80
     ph = which_hamiltonian(method, p)
     I = zeros(Float64, length(θlist)-1, length(ϕlist))  
     for i in 1:length(ϕlist) 
