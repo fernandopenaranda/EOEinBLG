@@ -298,7 +298,7 @@ function which_hamiltonian(method, p)
 end
 
 function icϕ_exactdiag(ϕlist::Array{T,1}, p, method; kw...) where {T}
-    θlist =-3π/20:2π/20:2π #80
+    θlist =-3π/20:2π/80:2π #80
     ph = which_hamiltonian(method, p)
     I = zeros(Float64, length(θlist)-1, length(ϕlist))  
     for i in 1:length(ϕlist) 
