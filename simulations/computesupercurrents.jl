@@ -20,3 +20,13 @@ p = Params(Ln = 200, Lny = 100, Ls = 10, a0 = 10, Δ = .05,  μs = 0.)
 p_use = reconstruct(p, μnvabands = 0.05, nvacbands = 2, τnlink =  1, τns = 0.5, μn = 0.145);
 ij = Jcsweepvstaunlink(p_use, jctaulist, fluxlist, :edgevac)
 savecsv(p_use, ij)
+
+
+
+jctaulist = collect(0:0.1:1);
+fluxlist = collect(0:0.05:2);
+#Figure 3 edgevacuum modes
+p = Params(Ln = 200, Lny = 100, Ls = 10, a0 = 10, Δ = .05,  μs = 0.)
+p_use = reconstruct(p, μnvabands = 0.1, nvacbands = 1, τnlink =  1, τns = 0.5, μn = 0.145);
+ij = Jcsweepvstauns(p_use, jctaulist, fluxlist, :edgevac)
+savecsv(p_use, ij)

@@ -17,7 +17,8 @@ module EOEinBLG
     export Params, snshamiltonian, snshelicalhamiltonian, fraunhofer_abs_exact, icϕ_exactdiag, 
         supercurrent_exactdiag, negative_eigen, Jcsweep, spectrumvsmun, spectrumvstheta, which_hamiltonian, Jcsweepvsnbads,
         spectrumvsmunmin_finder, Jcsweepvsnbadsresonance, spectrumvsmuncondition_finder,
-        spectrumvsmunnbands, savecsv, spectrumvsτnlink,Jcsweepvsmuvacbands, Jcsweepvsmu, Jcsweepvstaunlink, spectrumvsmuvac
+        spectrumvsmunnbands, savecsv, spectrumvsτnlink,Jcsweepvsmuvacbands, Jcsweepvsmu, Jcsweepvstaunlink, Jcsweepvstauns,
+        spectrumvsmuvac
 end
 
 

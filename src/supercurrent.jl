@@ -22,6 +22,15 @@ function Jcsweepvstaunlink(p, taulist, fluxlist, method = :edgevac)
     return Ivsmu
 end
 
+function Jcsweepvstauns(p, taulist, fluxlist, method = :edgevac)
+    Ivsmu = zeros(Float64, length(taulist), length(fluxlist))  
+    println(p)
+    for i in 1:length(taulist)
+        Ivsmu[i,:] = fraunhofer_abs_exact(fluxlist, reconstruct(p, τns = taulist[i]), :edgevac)[2]
+    end
+    return Ivsmu
+end
+
 function Jcsweepvsmu(p, mulist, fluxlist, method = :edgevac)
     Ivsmu = zeros(Float64, length(mulist), length(fluxlist))  
     for i in 1:length(mulist)
