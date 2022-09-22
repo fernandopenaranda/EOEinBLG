@@ -71,7 +71,7 @@ function modelhelical(p = Params())
     (; a0, Ln, Lny, Ls, nvacbands, μn) = p
     t = hoppingconstant(a0)
     hel_ons = onsite((2t-μn) * σ0τz)
-    hel_hop = hopping((r,dr)-> -t * σ0τz, range = a0)#ifelse(dr[1]==0, 0, 1) *
+    hel_hop = hopping((r,dr)-> -t * σ0τz, range = a0)
     return hel_ons+hel_hop
 end
 
@@ -117,7 +117,6 @@ end
 function modelregcoupling(p = Params())
     (; a0, τns, τnlink, Ln, nvacbands,Lny) = p
     t = hoppingconstant(a0)
-    #return hopping((r, dr) -> -t* τnlink * ifelse(0<(dr[2]/2+r[2])<Lny,0,1) * ifelse(0<(-dr[2]/2+r[2])<Lny,0,1) * ifelse(Ln+a0 >r[1]> a0, 1,1) * ifelse(dr[1] == 0, 1, 0) * σ0τz, range = (nvacbands)*a0),  hopping(-t*τns * σ0τz, range = a0) 
     return hopping((r, dr) -> -t* τnlink * ifelse(0<(dr[2]/2+r[2])<Lny,0,1) * ifelse(0<(-dr[2]/2+r[2])<Lny,0,1) * ifelse(Ln+a0 >r[1]> a0,0,1) * σ0τz, range = (nvacbands)*a0),  hopping(-t*τns * σ0τz, range = a0) 
 end
 
