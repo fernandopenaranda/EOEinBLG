@@ -1,8 +1,11 @@
-# """
-#     Jcsweep(p, list, method)
-# computes Jc(\phi) for different values of μn for an available method 
-# see: fraunhofer_abs_exact()
-# """
+#####################################################################
+# Code for supercurrent and spectral calculations
+#####################################################################
+ """
+     Jcsweep(p, list, method)
+ computes Jc(\phi) for different values of μn for an available method 
+ see: fraunhofer_abs_exact()
+ """
 function Jcsweep(p, list, method = :edgevac)
     fluxlist = collect(0:0.1:4)
     Ivsmu = zeros(Float64, length(list), length(fluxlist))  
@@ -31,6 +34,15 @@ function Jcsweepvstauns(p, taulist, fluxlist, method = :edgevac)
     return Ivsmu
 end
 
+function Jcsweepvsdelta(p, Δlist, fluxlist, method = :edgevac)
+    Ivsmu = zeros(Float64, length(Δlist), length(fluxlist))  
+    println(p)
+    for i in 1:length(Δlist)
+        Ivsmu[i,:] = fraunhofer_abs_exact(fluxlist, reconstruct(p, Δ = Δlist[i]), :edgevac)[2]
+    end
+    return Ivsmu
+end
+
 function Jcsweepvsmu(p, mulist, fluxlist, method = :edgevac)
     Ivsmu = zeros(Float64, length(mulist), length(fluxlist))  
     for i in 1:length(mulist)
@@ -38,7 +50,6 @@ function Jcsweepvsmu(p, mulist, fluxlist, method = :edgevac)
     end
     return Ivsmu
 end
-
 
 function Jcsweepvsmuvacbands(p, mulist, fluxlist, method = :edgevac)
     Ivsmu = zeros(Float64, length(mulist), length(fluxlist))  
@@ -267,7 +278,6 @@ function spectrumvsmuncondition_finder(p, list,θ, ϕ, energy_excited,  method)
     
 end
 
-
 """
     fraunhofer_abs_exact(ϕlist::Array{T,1}, p, method = :edgevac; kw...)
 computes the fraunhofer pattern using exact diagonalization for a hamiltonian 
@@ -288,7 +298,12 @@ function fraunhofer_abs_exact(ϕlist::Array{T,1}, p, method = :edgevac; kw...) w
     end
     return ϕlist, icmax, ic
 end
-    
+
+
+"""
+    which_hamiltonian(method, p)
+selects the hamiltonian form between the 5 different systems implemented
+"""
 function which_hamiltonian(method, p)
         if method == :edgevac
             snshamiltonian(p)

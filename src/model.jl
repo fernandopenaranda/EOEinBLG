@@ -26,6 +26,7 @@ end
 
 hoppingconstant(a0) =  ħħom/(2a0^2)
 
+# makes the lattices commensurate to avoid unwanted dangling bonds
 function check_lattice(a0, Ln, Lny, Ls)
     if (Ln % a0 != 0)
         @warn "make Ln commensurate by a0 to avoid lattice errors"
@@ -36,6 +37,8 @@ function check_lattice(a0, Ln, Lny, Ls)
     else nothing end
 end
 
+# sets the lattice for the different regions in our model: helical, 
+# top and bottom trivial vacuum edges and left and right SC regions
 function lattices(p = Params())
     (; a0, Ln, Lny, Ls, nvacbands) = p
 
@@ -67,6 +70,7 @@ function lattices(p = Params())
         Quantica.combine(lat_scdenseleft, lat_scdenseright)
 end
  
+# MODELS
 function modelhelical(p = Params())
     (; a0, Ln, Lny, Ls, nvacbands, μn) = p
     t = hoppingconstant(a0)
@@ -74,7 +78,6 @@ function modelhelical(p = Params())
     hel_hop = hopping((r,dr)-> -t * σ0τz, range = a0)
     return hel_ons+hel_hop
 end
-
 function peierlshop!(p = Params())
     (; a0, Ln, Lny, Ls, nvacbands, μn) = p
     
@@ -125,6 +128,8 @@ function modelregcouplingdense(p = Params())
     t = hoppingconstant(a0)
     return hopping( (r, dr) -> -t*τnlink * ifelse(Ln+a0 >r[1]> a0,0,1)* σ0τz, range = a0),  hopping(-t*τns * σ0τz, range = a0)                        
 end
+
+# CONSTRUCTION OF THE HAMILTONIANS
                         
 function snshamiltonian(p = Params())
     lat_hel, lat_vac, lat_sc, _ = lattices(p)
@@ -199,7 +204,7 @@ end
 
 ########
 
-#tests
+#tests, checks that the Hamiltonian is correctly written in Nambu form
 
 isnambu(h::Quantica.ParametricHamiltonian) = isnambu(h())
 
