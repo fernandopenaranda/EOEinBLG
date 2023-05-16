@@ -1,5 +1,5 @@
 # EOEinBLG
-
+[![DOI](https://zenodo.org/badge/501569913.svg)](https://zenodo.org/badge/latestdoi/501569913)
 [![Stable](https://img.shields.io/badge/docs-stable-blue.svg)](https://fernandopenaranda.github.io/EOEinBLG.jl/stable)
 [![Dev](https://img.shields.io/badge/docs-dev-blue.svg)](https://fernandopenaranda.github.io/EOEinBLG.jl/dev)
 
